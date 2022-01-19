@@ -154,16 +154,13 @@ class PythonLSPServer(MethodDispatcher):
 
     def _match_uri_to_workspace(self, uri):
         workspace_uri = _utils.match_uri_to_workspace(uri, self.workspaces)
-        log.info(f"WORKSPACE URI {workspace_uri}")
         return self.workspaces.get(workspace_uri, self.workspace)
 
     def _hook(self, hook_name, doc_uri=None, **kwargs):
         """Calls hook_name and returns a list of results from all registered handlers"""
         workspace = self._match_uri_to_workspace(doc_uri)
-        log.info(
-            f"workspace {workspace}\n doc {doc_uri} \n hook {hook_name} \n kwargs {kwargs}"
-        )
         doc = workspace.get_document(doc_uri) if doc_uri else None
+        log.error(f"{hook_name}\t {workspace}\t {doc_uri} \t {doc}")
         hook_handlers = self.config.plugin_manager.subset_hook_caller(
             hook_name, self.config.disabled_plugins
         )
@@ -225,8 +222,11 @@ class PythonLSPServer(MethodDispatcher):
             rootPath,
             initializationOptions,
         )
+
         if rootUri is None:
             rootUri = uris.from_fs_path(rootPath) if rootPath is not None else ""
+
+        log.error(f"LSP INITIALIZED WITH ROOT URI, {rootUri}")
 
         self.workspaces.pop(self.root_uri, None)
         self.root_uri = rootUri
@@ -380,6 +380,7 @@ class PythonLSPServer(MethodDispatcher):
     def m_text_document__did_change(
         self, contentChanges=None, textDocument=None, **_kwargs
     ):
+        log.error(f"WORKSPACES, {self.workspaces}")
         workspace = self._match_uri_to_workspace(textDocument["uri"])
         for change in contentChanges:
             workspace.update_document(
@@ -455,59 +456,60 @@ class PythonLSPServer(MethodDispatcher):
     def m_workspace__did_change_workspace_folders(
         self, event=None, **_kwargs
     ):  # pylint: disable=too-many-locals
-        if event is None:
-            return
-        added = event.get("added", [])
-        removed = event.get("removed", [])
+        pass
+        # if event is None:
+        #     return
+        # added = event.get("added", [])
+        # removed = event.get("removed", [])
 
-        for removed_info in removed:
-            if "uri" in removed_info:
-                removed_uri = removed_info["uri"]
-                self.workspaces.pop(removed_uri, None)
+        # for removed_info in removed:
+        #     if "uri" in removed_info:
+        #         removed_uri = removed_info["uri"]
+        #         self.workspaces.pop(removed_uri, None)
 
-        for added_info in added:
-            if "uri" in added_info:
-                added_uri = added_info["uri"]
-                workspace_config = config.Config(
-                    added_uri,
-                    self.config._init_opts,
-                    self.config._process_id,
-                    self.config._capabilities,
-                )
-                workspace_config.update(self.config._settings)
-                self.workspaces[added_uri] = Workspace(
-                    added_uri, self._endpoint, workspace_config
-                )
+        # for added_info in added:
+        #     if "uri" in added_info:
+        #         added_uri = added_info["uri"]
+        #         workspace_config = config.Config(
+        #             added_uri,
+        #             self.config._init_opts,
+        #             self.config._process_id,
+        #             self.config._capabilities,
+        #         )
+        #         workspace_config.update(self.config._settings)
+        #         self.workspaces[added_uri] = Workspace(
+        #             added_uri, self._endpoint, workspace_config
+        #         )
 
-        root_workspace_removed = any(
-            removed_info["uri"] == self.root_uri for removed_info in removed
-        )
-        workspace_added = len(added) > 0 and "uri" in added[0]
-        if root_workspace_removed and workspace_added:
-            added_uri = added[0]["uri"]
-            self.root_uri = added_uri
-            new_root_workspace = self.workspaces[added_uri]
-            self.config = new_root_workspace._config
-            self.workspace = new_root_workspace
-        elif root_workspace_removed:
-            # NOTE: Removing the root workspace can only happen when the server
-            # is closed, thus the else condition of this if can never happen.
-            if self.workspaces:
-                log.debug("Root workspace deleted!")
-                available_workspaces = sorted(self.workspaces)
-                first_workspace = available_workspaces[0]
-                new_root_workspace = self.workspaces[first_workspace]
-                self.root_uri = first_workspace
-                self.config = new_root_workspace._config
-                self.workspace = new_root_workspace
+        # root_workspace_removed = any(
+        #     removed_info["uri"] == self.root_uri for removed_info in removed
+        # )
+        # workspace_added = len(added) > 0 and "uri" in added[0]
+        # if root_workspace_removed and workspace_added:
+        #     added_uri = added[0]["uri"]
+        #     self.root_uri = added_uri
+        #     new_root_workspace = self.workspaces[added_uri]
+        #     self.config = new_root_workspace._config
+        #     self.workspace = new_root_workspace
+        # elif root_workspace_removed:
+        #     # NOTE: Removing the root workspace can only happen when the server
+        #     # is closed, thus the else condition of this if can never happen.
+        #     if self.workspaces:
+        #         log.debug("Root workspace deleted!")
+        #         available_workspaces = sorted(self.workspaces)
+        #         first_workspace = available_workspaces[0]
+        #         new_root_workspace = self.workspaces[first_workspace]
+        #         self.root_uri = first_workspace
+        #         self.config = new_root_workspace._config
+        #         self.workspace = new_root_workspace
 
-        # Migrate documents that are on the root workspace and have a better
-        # match now
-        doc_uris = list(self.workspace._docs.keys())
-        for uri in doc_uris:
-            doc = self.workspace._docs.pop(uri)
-            new_workspace = self._match_uri_to_workspace(uri)
-            new_workspace._docs[uri] = doc
+        # # Migrate documents that are on the root workspace and have a better
+        # # match now
+        # doc_uris = list(self.workspace._docs.keys())
+        # for uri in doc_uris:
+        #     doc = self.workspace._docs.pop(uri)
+        #     new_workspace = self._match_uri_to_workspace(uri)
+        #     new_workspace._docs[uri] = doc
 
     def m_workspace__did_change_watched_files(self, changes=None, **_kwargs):
         changed_py_files = set()
