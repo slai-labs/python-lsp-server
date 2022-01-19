@@ -37,6 +37,8 @@ class Workspace:
     M_SHOW_MESSAGE = "window/showMessage"
 
     def __init__(self, root_uri, endpoint, config=None):
+        log.info(f"creating workspace for {root_uri}")
+
         self._config = config
         self._root_uri = root_uri
         self._endpoint = endpoint

@@ -122,6 +122,7 @@ class PythonLSPServer(MethodDispatcher):
 
     def start(self):
         """Entry point for the server."""
+        log.info("Server starting")
         self._jsonrpc_stream_reader.listen(self._endpoint.consume)
 
     def __getitem__(self, item):
@@ -153,13 +154,15 @@ class PythonLSPServer(MethodDispatcher):
 
     def _match_uri_to_workspace(self, uri):
         workspace_uri = _utils.match_uri_to_workspace(uri, self.workspaces)
-        print("WORKSPACE URI", workspace_uri)
+        log.info(f"WORKSPACE URI {workspace_uri}")
         return self.workspaces.get(workspace_uri, self.workspace)
 
     def _hook(self, hook_name, doc_uri=None, **kwargs):
         """Calls hook_name and returns a list of results from all registered handlers"""
         workspace = self._match_uri_to_workspace(doc_uri)
-
+        log.info(
+            f"workspace {workspace}\n doc {doc_uri} \n hook {hook_name} \n kwargs {kwargs}"
+        )
         doc = workspace.get_document(doc_uri) if doc_uri else None
         hook_handlers = self.config.plugin_manager.subset_hook_caller(
             hook_name, self.config.disabled_plugins
@@ -213,7 +216,7 @@ class PythonLSPServer(MethodDispatcher):
         rootPath=None,
         initializationOptions=None,
         workspaceFolders=None,
-        **_kwargs
+        **_kwargs,
     ):
         log.debug(
             "Language server initialized with %s %s %s %s",
@@ -364,6 +367,7 @@ class PythonLSPServer(MethodDispatcher):
         workspace.rm_document(textDocument["uri"])
 
     def m_text_document__did_open(self, textDocument=None, **_kwargs):
+        log.info(f"DOCUMENT DID OPEN... {textDocument['uri']}")
         workspace = self._match_uri_to_workspace(textDocument["uri"])
         workspace.put_document(
             textDocument["uri"],
