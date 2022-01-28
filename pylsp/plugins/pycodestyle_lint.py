@@ -21,6 +21,11 @@ log = logging.getLogger(__name__)
 
 
 @hookimpl
+def pylsp_settings():
+    return {'plugins': {'pycodestyle': {'enabled': False}}}
+
+
+@hookimpl
 def pylsp_lint(workspace, document):
     config = workspace._config
     settings = config.plugin_settings('pycodestyle', document_path=document.path)
