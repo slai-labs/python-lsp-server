@@ -17,8 +17,12 @@ FIX_IGNORES_RE = re.compile(r'([^a-zA-Z0-9_,]*;.*(\W+||$))')
 
 @hookimpl
 def pylsp_settings():
-    # Default flake8 to disabled
-    return {'plugins': {'flake8': {'enabled': False}}}
+    # E303 Too many blank lines
+    # E501 Line too long
+
+    return {'plugins': {'flake8': {
+        'enabled': True,
+        'ignore': ['E303', 'E501']}}}
 
 
 @hookimpl
