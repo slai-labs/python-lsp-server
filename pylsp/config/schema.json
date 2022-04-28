@@ -6,11 +6,11 @@
   "properties": {
     "pylsp.configurationSources": {
       "type": "array",
-      "default": ["pycodestyle"],
+      "default": ["flake8"],
       "description": "List of configuration sources to use.",
       "items": {
         "type": "string",
-        "enum": ["pycodestyle", "pyflakes"]
+        "enum": ["flake8"]
       },
       "uniqueItems": true
     },
@@ -21,7 +21,7 @@
     },
     "pylsp.plugins.flake8.enabled": {
       "type": "boolean",
-      "default": false,
+      "default": true,
       "description": "Enable or disable the plugin."
     },
     "pylsp.plugins.flake8.exclude": {
@@ -309,7 +309,7 @@
     },
     "pylsp.plugins.pyflakes.enabled": {
       "type": "boolean",
-      "default": true,
+      "default": false,
       "description": "Enable or disable the plugin."
     },
     "pylsp.plugins.pylint.enabled": {
