@@ -12,7 +12,7 @@ from subprocess import PIPE, Popen
 from pylsp import hookimpl, lsp
 
 log = logging.getLogger(__name__)
-FIX_IGNORES_RE = re.compile(r'([^a-zA-Z0-9_,]*;.*(\W+||$))')
+FIX_IGNORES_RE = re.compile(r"([^a-zA-Z0-9_,]*;.*(\W+||$))")
 
 
 @hookimpl
@@ -20,15 +20,31 @@ def pylsp_settings():
     # E303 Too many blank lines
     # E501 Line too long
 
-    return {'plugins': {'flake8': {
-        'enabled': True,
-        'ignore': ['E303', 'E501']}}}
+    return {
+        "plugins": {
+            "flake8": {
+                "enabled": True,
+                "ignore": [
+                    "E303",
+                    "E501",
+                    "E226",
+                    "E302",
+                    "E41",
+                    "W503",
+                    "E722",
+                    "W504",
+                    "W292",
+                    "F821",
+                ],
+            }
+        }
+    }
 
 
 @hookimpl
 def pylsp_lint(workspace, document):
     config = workspace._config
-    settings = config.plugin_settings('flake8', document_path=document.path)
+    settings = config.plugin_settings("flake8", document_path=document.path)
     log.debug("Got flake8 settings: %s", settings)
 
     ignores = settings.get("ignore", [])
@@ -41,26 +57,26 @@ def pylsp_lint(workspace, document):
                 ignores.extend(errors.split(","))
 
     opts = {
-        'config': settings.get('config'),
-        'exclude': settings.get('exclude'),
-        'filename': settings.get('filename'),
-        'hang-closing': settings.get('hangClosing'),
-        'ignore': ignores or None,
-        'max-line-length': settings.get('maxLineLength'),
-        'indent-size': settings.get('indentSize'),
-        'select': settings.get('select'),
+        "config": settings.get("config"),
+        "exclude": settings.get("exclude"),
+        "filename": settings.get("filename"),
+        "hang-closing": settings.get("hangClosing"),
+        "ignore": ignores or None,
+        "max-line-length": settings.get("maxLineLength"),
+        "indent-size": settings.get("indentSize"),
+        "select": settings.get("select"),
     }
 
     # flake takes only absolute path to the config. So we should check and
     # convert if necessary
-    if opts.get('config') and not os.path.isabs(opts.get('config')):
-        opts['config'] = os.path.abspath(os.path.expanduser(os.path.expandvars(
-            opts.get('config')
-        )))
-        log.debug("using flake8 with config: %s", opts['config'])
+    if opts.get("config") and not os.path.isabs(opts.get("config")):
+        opts["config"] = os.path.abspath(
+            os.path.expanduser(os.path.expandvars(opts.get("config")))
+        )
+        log.debug("using flake8 with config: %s", opts["config"])
 
     # Call the flake8 utility then parse diagnostics from stdout
-    flake8_executable = settings.get('executable', 'flake8')
+    flake8_executable = settings.get("executable", "flake8")
 
     args = build_args(opts)
     output = run_flake8(flake8_executable, args, document)
@@ -72,8 +88,11 @@ def run_flake8(flake8_executable, args, document):
     from stderr if any.
     """
     # a quick temporary fix to deal with Atom
-    args = [(i if not i.startswith('--ignore=') else FIX_IGNORES_RE.sub('', i))
-            for i in args if i is not None]
+    args = [
+        (i if not i.startswith("--ignore=") else FIX_IGNORES_RE.sub("", i))
+        for i in args
+        if i is not None
+    ]
 
     # if executable looks like a path resolve it
     if not os.path.isfile(flake8_executable) and os.sep in flake8_executable:
@@ -85,12 +104,20 @@ def run_flake8(flake8_executable, args, document):
     try:
         cmd = [flake8_executable]
         cmd.extend(args)
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # pylint: disable=consider-using-with
+        p = Popen(
+            cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE
+        )  # pylint: disable=consider-using-with
     except IOError:
-        log.debug("Can't execute %s. Trying with '%s -m flake8'", flake8_executable, sys.executable)
-        cmd = [sys.executable, '-m', 'flake8']
+        log.debug(
+            "Can't execute %s. Trying with '%s -m flake8'",
+            flake8_executable,
+            sys.executable,
+        )
+        cmd = [sys.executable, "-m", "flake8"]
         cmd.extend(args)
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)  # pylint: disable=consider-using-with
+        p = Popen(
+            cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE
+        )  # pylint: disable=consider-using-with
     (stdout, stderr) = p.communicate(document.source.encode())
     if stderr:
         log.error("Error while running flake8 '%s'", stderr.decode())
@@ -103,18 +130,18 @@ def build_args(options):
     Args:
         options: dictionary of argument names and their values.
     """
-    args = ['-']  # use stdin
+    args = ["-"]  # use stdin
     for arg_name, arg_val in options.items():
         if arg_val is None:
             continue
         arg = None
         if isinstance(arg_val, list):
-            arg = '--{}={}'.format(arg_name, ','.join(arg_val))
+            arg = "--{}={}".format(arg_name, ",".join(arg_val))
         elif isinstance(arg_val, bool):
             if arg_val:
-                arg = '--{}'.format(arg_name)
+                arg = "--{}".format(arg_name)
         else:
-            arg = '--{}={}'.format(arg_name, arg_val)
+            arg = "--{}={}".format(arg_name, arg_val)
         args.append(arg)
     return args
 
@@ -150,7 +177,7 @@ def parse_stdout(document, stdout):
     diagnostics = []
     lines = stdout.splitlines()
     for raw_line in lines:
-        parsed_line = re.match(r'(.*):(\d*):(\d*): (\w*) (.*)', raw_line)
+        parsed_line = re.match(r"(.*):(\d*):(\d*): (\w*) (.*)", raw_line)
         if not parsed_line:
             log.debug("Flake8 output parser can't parse line '%s'", raw_line)
             continue
@@ -164,24 +191,21 @@ def parse_stdout(document, stdout):
         line = int(line) - 1
         character = int(character) - 1
         # show also the code in message
-        msg = code + ' ' + msg
+        msg = code + " " + msg
         diagnostics.append(
             {
-                'source': 'flake8',
-                'code': code,
-                'range': {
-                    'start': {
-                        'line': line,
-                        'character': character
-                    },
-                    'end': {
-                        'line': line,
+                "source": "flake8",
+                "code": code,
+                "range": {
+                    "start": {"line": line, "character": character},
+                    "end": {
+                        "line": line,
                         # no way to determine the column
-                        'character': len(document.lines[line])
-                    }
+                        "character": len(document.lines[line]),
+                    },
                 },
-                'message': msg,
-                'severity': lsp.DiagnosticSeverity.Warning,
+                "message": msg,
+                "severity": lsp.DiagnosticSeverity.Warning,
             }
         )
 
